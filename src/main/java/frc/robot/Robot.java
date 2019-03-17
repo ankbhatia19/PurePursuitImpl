@@ -12,6 +12,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.wpilibj.IterativeRobot;
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -34,6 +35,11 @@ public class Robot extends IterativeRobot {
   private static final String kCustomAuto = "My Auto";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
+  private final Joystick leftJoy = new Joystick(0);
+  private final Joystick rightJoy = new Joystick(1);
+
+  private final CheesyDriveHelper cheesyDrive = new CheesyDriveHelper();
 
   TalonSRX leftTalon, rightTalon;
   AHRS gyro;
@@ -114,7 +120,24 @@ public class Robot extends IterativeRobot {
         break;
       case kDefaultAuto:
       default:
-        // Put default auto code here
+        double l = left.calculate(leftTalon.getSensorCollection().getQuadraturePosition());
+        double r = right.calculate(rightTalon.getSensorCollection().getQuadraturePosition());
+  
+        double gyro_heading = gyro.getYaw();     // Assuming the gyro is giving a value in degrees
+        double desired_heading = Pathfinder.r2d(left.getHeading());  // Should also be in degrees
+  
+        // This allows the angle difference to respect 'wrapping', where 360 and 0 are the same value
+        double angleDifference = Pathfinder.boundHalfDegrees(desired_heading - gyro_heading);
+        angleDifference = angleDifference % 360.0;
+        if (Math.abs(angleDifference) > 180.0) {
+          angleDifference = (angleDifference > 0) ? angleDifference - 360 : angleDifference + 360;
+        } 
+  
+        double turn = 0.8 * (-1.0/80.0) * angleDifference;
+  
+        leftTalon.set(ControlMode.PercentOutput, l + turn);
+        rightTalon.set(ControlMode.PercentOutput, r - turn);
+
         break;
     }
   }
@@ -124,23 +147,10 @@ public class Robot extends IterativeRobot {
    */
   @Override
   public void teleopPeriodic() {
-    double l = left.calculate(leftTalon.getSensorCollection().getQuadraturePosition());
-    double r = right.calculate(rightTalon.getSensorCollection().getQuadraturePosition());
 
-    double gyro_heading = gyro.getYaw();     // Assuming the gyro is giving a value in degrees
-    double desired_heading = Pathfinder.r2d(left.getHeading());  // Should also be in degrees
-
-    // This allows the angle difference to respect 'wrapping', where 360 and 0 are the same value
-    double angleDifference = Pathfinder.boundHalfDegrees(desired_heading - gyro_heading);
-    angleDifference = angleDifference % 360.0;
-    if (Math.abs(angleDifference) > 180.0) {
-      angleDifference = (angleDifference > 0) ? angleDifference - 360 : angleDifference + 360;
-    } 
-
-    double turn = 0.8 * (-1.0/80.0) * angleDifference;
-
-    leftTalon.set(ControlMode.PercentOutput, l + turn);
-    rightTalon.set(ControlMode.PercentOutput, r - turn);
+    double[] powers = cheesyDrive.cheesyDrive(leftJoy.getY(), rightJoy.getTwist(), leftJoy.getRawButtonPressed(1), false);
+    leftTalon.set(ControlMode.PercentOutput, powers[0]);
+    rightTalon.set(ControlMode.PercentOutput, powers[1]);
   }
 
   /**
