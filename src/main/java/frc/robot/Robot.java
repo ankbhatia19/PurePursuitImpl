@@ -14,6 +14,8 @@ import com.kauailabs.navx.frc.AHRS;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.GenericHID.Hand;
 import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -38,6 +40,9 @@ public class Robot extends IterativeRobot {
 
   private final Joystick leftJoy = new Joystick(0);
   private final Joystick rightJoy = new Joystick(1);
+
+  private final XboxController controller = new XboxController(2);
+
 
   private final CheesyDriveHelper cheesyDrive = new CheesyDriveHelper();
 
@@ -67,6 +72,8 @@ public class Robot extends IterativeRobot {
     gyro = new AHRS(SPI.Port.kMXP);
     leftTalon = new TalonSRX(2);
     rightTalon = new TalonSRX(3);
+    rightTalon.setInverted(true);
+    leftTalon.setInverted(false);
     m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
     m_chooser.addOption("My Auto", kCustomAuto);
     SmartDashboard.putData("Auto choices", m_chooser);
@@ -88,6 +95,13 @@ public class Robot extends IterativeRobot {
    */
   @Override
   public void robotPeriodic() {
+    SmartDashboard.putNumber("Left hand", controller.getY(Hand.kLeft));
+    SmartDashboard.putNumber("Right hand", controller.getX(Hand.kRight));
+    //System.out.println(controller.getX(Hand.kRight));
+    //System.out.println(controller.getY(Hand.kLeft));
+    double[] powers = cheesyDrive.cheesyDrive(controller.getY(Hand.kLeft), controller.getX(Hand.kRight), false, false);
+    SmartDashboard.putNumber("Left Power", powers[0]);
+    SmartDashboard.putNumber("Right Power", powers[1]);
   }
 
   /**
@@ -148,7 +162,10 @@ public class Robot extends IterativeRobot {
   @Override
   public void teleopPeriodic() {
 
-    double[] powers = cheesyDrive.cheesyDrive(leftJoy.getY(), rightJoy.getTwist(), leftJoy.getRawButtonPressed(1), false);
+    //controller.getX(Hand.kLeft);
+    System.out.println(controller.getX(Hand.kRight));
+    System.out.println(controller.getY(Hand.kLeft));
+    double[] powers = cheesyDrive.cheesyDrive(controller.getY(Hand.kLeft), controller.getX(Hand.kRight), false, false);
     leftTalon.set(ControlMode.PercentOutput, powers[0]);
     rightTalon.set(ControlMode.PercentOutput, powers[1]);
   }
@@ -156,7 +173,51 @@ public class Robot extends IterativeRobot {
   /**
    * This function is called periodically during test mode.
    */
+
+   public double metersToTicks(double meters){
+     
+     /*
+      Solve for x, where x is the amount of ticks
+      x / meters = ticksPerRevolution / distancePerRevolution
+      x = meters * (ticksPerRevolution / distnacePerRevolution)
+     */
+    double distancePerRevolution = 2 * Math.PI * Constants.wheelRadius;
+     return meters * (Constants.ticksPerRevolution / distancePerRevolution);
+   }
+
+   public double calcFeedForward(double targetVel){
+     return Constants.kV * targetVel;
+   }
+
+   public double calcFeedBack(double targetVel, double measuredVel){
+     return Constants.kP * (targetVel - measuredVel);
+   }
+
+   public void moveArc(double velocity, double radius){
+      //Turning all my units from meters into ticks
+      //and setting up my V, T and C constants
+      radius = metersToTicks(radius);
+      velocity = metersToTicks(velocity); //V
+      double curvature = 1/radius; //C
+      double wheelBaseWidth = metersToTicks(Constants.wheelBaseWidth); //T
+      /*Target wheel velocities are given by
+      L = V * (2 + CT)/2
+      R = V * (2 - CT)/2
+      */
+      /*Left Wheel*/
+      double targetLeftVelocity = velocity * (2 + (curvature * wheelBaseWidth) / 2);
+      double myLeftVelocity = leftTalon.getSensorCollection().getQuadratureVelocity();
+      leftTalon.set(ControlMode.Velocity, (calcFeedForward(targetLeftVelocity) + calcFeedBack(targetLeftVelocity, myLeftVelocity)));
+      
+      /*Right Wheel*/
+      double targetRightVelocity = velocity * (2 - (curvature * wheelBaseWidth) / 2);
+      double myRightVelocity = rightTalon.getSensorCollection().getQuadratureVelocity();
+      rightTalon.set(ControlMode.Velocity, (calcFeedForward(targetRightVelocity) + calcFeedBack(targetRightVelocity, myRightVelocity)));
+    }
+
   @Override
   public void testPeriodic() {
+    leftTalon.set(ControlMode.PercentOutput, 0.5);
+    //rightTalon.set(ControlMode.PercentOutput, 0.5);
   }
 }

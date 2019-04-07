@@ -35,6 +35,10 @@ public class CheesyDriveHelper {
 
     public double[] cheesyDrive(double throttle, double wheel, boolean isQuickTurn,
             boolean isHighGear) {
+        
+        if (throttle < 0.1){
+            isQuickTurn = true;
+        }        
 
         wheel = handleDeadband(wheel, kWheelDeadband);
         throttle = handleDeadband(throttle, kThrottleDeadband);
