@@ -17,6 +17,7 @@ public class PurePursuit {
     private Trajectory path;
     private int indexCurrentPoint;
     private int indexLookaheadPoint;
+    private Odometry odo;
 
     public PurePursuit(Trajectory path) {
         this.path = path;
@@ -24,7 +25,7 @@ public class PurePursuit {
         indexLookaheadPoint = indexCurrentPoint + 1;
     }
 
-    public double[] getNextVelocities(double leftVel, double rightVel){
+    public double[] getNextVelocities(double leftVel, double rightVel, Odometry odo){
         /* The algorithm to follow the path is as follows:
             ● Find the closest point
             ● Find the lookahead point
@@ -34,7 +35,7 @@ public class PurePursuit {
         */
         Segment currentPoint = this.path.get(getCurrentPointIndex());
         Segment lookaheadPoint = this.path.get(getLookaheadPointIndex());
-        double curvature = this.calculateCurvature(Robot.odo.getTheta(), currentPoint, lookaheadPoint);
+        double curvature = this.calculateCurvature(odo.getTheta(), currentPoint, lookaheadPoint);
         double[] targetVels = this.getTargetVelocities(curvature);
         double[] finishedVels = {0, 0};
         finishedVels[0] = calcFeedForward(targetVels[0]) + calcFeedBack(targetVels[0], leftVel);
@@ -44,7 +45,7 @@ public class PurePursuit {
     }
 
     private int getCurrentPointIndex() {
-        Odometry odo = Robot.odo;
+
         double closestDistance = Double.MAX_VALUE;
         int index = -1;
         for (int i = indexCurrentPoint; i < indexCurrentPoint + 6; i++){
@@ -62,7 +63,7 @@ public class PurePursuit {
         return indexLookaheadPoint + Constants.lookaheadDistance;
     }
 
-    private double calculateCurvature(double robotAngle, Segment robot, Segment lookahead) {
+    public double calculateCurvature(double robotAngle, Segment robot, Segment lookahead) {
         /* curvature = 2x/L^2 */
         /*
          * a = − tan(robot angle) 
@@ -85,14 +86,14 @@ public class PurePursuit {
         return (curvature * side);
     }
 
-    private double[] getTargetVelocities(double curvature) {
+    public double[] getTargetVelocities(double curvature) {
 
         double[] velocities = { 0, 0 };
 
         double velocity = Constants.maxVelocity;
-        velocity = Units.metersToTicks(velocity); // V
-        curvature = Units.metersToTicks(curvature); // C
-        double wheelBaseWidth = Units.metersToTicks(Constants.wheelBaseWidth); // T
+        velocity = Units.feetToTicks(velocity); // V
+        curvature = Units.feetToTicks(curvature); // C
+        double wheelBaseWidth = Units.feetToTicks(Constants.wheelBaseWidth); // T
 
         /*
          * Target wheel velocities are given by L = V * (2 + CT)/2 R = V * (2 - CT)/2

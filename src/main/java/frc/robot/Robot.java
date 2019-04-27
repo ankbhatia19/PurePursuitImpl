@@ -44,8 +44,8 @@ public class Robot extends IterativeRobot {
 
   private final XboxController controller = new XboxController(2);
 
-  public static   Odometry odo;
   private final CheesyDriveHelper cheesyDrive = new CheesyDriveHelper();
+
 
   TalonSRX leftTalon, rightTalon;
   AHRS gyro;
@@ -58,14 +58,12 @@ public class Robot extends IterativeRobot {
 
   Trajectory.Config config = new Trajectory.Config(Trajectory.FitMethod.HERMITE_CUBIC, Trajectory.Config.SAMPLES_HIGH, 0.05, 1.7, 2.0, 60.0);
   Trajectory trajectory = Pathfinder.generate(points, config);
+  public PurePursuit pursuit = new PurePursuit(trajectory);
   TankModifier modifier = new TankModifier(trajectory).modify(Constants.wheelBaseWidth);
   
   EncoderFollower left = new EncoderFollower(modifier.getLeftTrajectory());
   EncoderFollower right = new EncoderFollower(modifier.getRightTrajectory()); 
 
-  double lastPos;
-  double currentPos;
-  double x, y, theta;
   
   /**
    * This function is run when the robot is first started up and should be
@@ -87,19 +85,6 @@ public class Robot extends IterativeRobot {
 
     right.configurePIDVA(1.0, 0.0, 0.0, 1 / Constants.maxVelocity, 0);
     left.configurePIDVA(1.0, 0.0, 0.0, 1 / Constants.maxVelocity, 0);
-
-    lastPos = (leftTalon.getSelectedSensorPosition(0) + rightTalon.getSelectedSensorPosition(0))/2;
-
-        Notifier odoThread = new Notifier(() ->{
-            currentPos = (leftTalon.getSelectedSensorPosition(0) + rightTalon.getSelectedSensorPosition(0))/2;
-            double dPos = Units.metersToTicks(currentPos - lastPos);
-            theta = Math.toRadians(gyro.getAngle());
-            x +=  Math.cos(theta) * dPos;
-            y +=  Math.sin(theta) * dPos;
-            lastPos = currentPos;
-        });
-
-        odoThread.startPeriodic(0.01);
   }
 
   /**
@@ -120,7 +105,6 @@ public class Robot extends IterativeRobot {
     SmartDashboard.putNumber("Left Power", powers[0]);
     SmartDashboard.putNumber("Right Power", powers[1]);
 
-    odo = new Odometry(x, y, theta);
   }
 
   /**
@@ -237,7 +221,10 @@ public class Robot extends IterativeRobot {
 
   @Override
   public void testPeriodic() {
-    leftTalon.set(ControlMode.PercentOutput, 0.5);
-    //rightTalon.set(ControlMode.PercentOutput, 0.5);
+
+       double radius = 3;
+       double[] powers = pursuit.getTargetVelocities(1/radius);
+       leftTalon.set(ControlMode.PercentOutput, powers[0]);
+       rightTalon.set(ControlMode.PercentOutput, powers[1]);
   }
 }

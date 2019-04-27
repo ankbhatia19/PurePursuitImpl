@@ -12,7 +12,7 @@ package frc.robot;
  */
 public class Units 
 {
-    public static double metersToTicks(double meters){
+    public static double feetToTicks(double feet){
      
         /*
          Solve for x, where x is the amount of ticks
@@ -21,10 +21,10 @@ public class Units
         */
        double distancePerRevolution = 2 * Math.PI * Constants.wheelRadius;
 
-        return meters * (Constants.ticksPerRevolution / distancePerRevolution);
+        return feet * (Constants.ticksPerRevolution / distancePerRevolution);
       }
 
-      public static double ticksToMeters(double ticks){
+      public static double ticksToFeet(double ticks){
            /*
          Solve for x, where x is the amount of meters
          ticks / x = ticksPerRevolution / distancePerRevolution

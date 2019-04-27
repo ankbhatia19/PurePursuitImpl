@@ -11,6 +11,8 @@ package frc.robot;
  * Add your docs here.
  */
 public class Constants {
+
+    //ALL UNITS ARE IN FEET
     public static double wheelRadius = 3;
     public static double maxVelocity = 1.7;
     public static double maxAcceleration = 2;
