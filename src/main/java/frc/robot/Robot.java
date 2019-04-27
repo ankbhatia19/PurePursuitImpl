@@ -13,10 +13,9 @@ import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.GenericHID.Hand;
-import edu.wpi.first.wpilibj.SPI.Port;
+import edu.wpi.first.wpilibj.SPI.Port;  
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import jaci.pathfinder.Pathfinder;
@@ -24,6 +23,8 @@ import jaci.pathfinder.Trajectory;
 import jaci.pathfinder.Waypoint;
 import jaci.pathfinder.followers.EncoderFollower;
 import jaci.pathfinder.modifiers.TankModifier;
+
+import edu.wpi.first.wpilibj.Notifier;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -43,7 +44,7 @@ public class Robot extends IterativeRobot {
 
   private final XboxController controller = new XboxController(2);
 
-
+  public static   Odometry odo;
   private final CheesyDriveHelper cheesyDrive = new CheesyDriveHelper();
 
   TalonSRX leftTalon, rightTalon;
@@ -62,6 +63,9 @@ public class Robot extends IterativeRobot {
   EncoderFollower left = new EncoderFollower(modifier.getLeftTrajectory());
   EncoderFollower right = new EncoderFollower(modifier.getRightTrajectory()); 
 
+  double lastPos;
+  double currentPos;
+  double x, y, theta;
   
   /**
    * This function is run when the robot is first started up and should be
@@ -69,7 +73,7 @@ public class Robot extends IterativeRobot {
    */
   @Override
   public void robotInit() {
-    gyro = new AHRS(SPI.Port.kMXP);
+    gyro = new AHRS(Port.kMXP);
     leftTalon = new TalonSRX(2);
     rightTalon = new TalonSRX(3);
     rightTalon.setInverted(true);
@@ -83,6 +87,19 @@ public class Robot extends IterativeRobot {
 
     right.configurePIDVA(1.0, 0.0, 0.0, 1 / Constants.maxVelocity, 0);
     left.configurePIDVA(1.0, 0.0, 0.0, 1 / Constants.maxVelocity, 0);
+
+    lastPos = (leftTalon.getSelectedSensorPosition(0) + rightTalon.getSelectedSensorPosition(0))/2;
+
+        Notifier odoThread = new Notifier(() ->{
+            currentPos = (leftTalon.getSelectedSensorPosition(0) + rightTalon.getSelectedSensorPosition(0))/2;
+            double dPos = Units.metersToTicks(currentPos - lastPos);
+            theta = Math.toRadians(gyro.getAngle());
+            x +=  Math.cos(theta) * dPos;
+            y +=  Math.sin(theta) * dPos;
+            lastPos = currentPos;
+        });
+
+        odoThread.startPeriodic(0.01);
   }
 
   /**
@@ -102,6 +119,8 @@ public class Robot extends IterativeRobot {
     double[] powers = cheesyDrive.cheesyDrive(controller.getY(Hand.kLeft), controller.getX(Hand.kRight), false, false);
     SmartDashboard.putNumber("Left Power", powers[0]);
     SmartDashboard.putNumber("Right Power", powers[1]);
+
+    odo = new Odometry(x, y, theta);
   }
 
   /**
@@ -207,6 +226,7 @@ public class Robot extends IterativeRobot {
       /*Left Wheel*/
       double targetLeftVelocity = velocity * (2 + (curvature * wheelBaseWidth) / 2);
       double myLeftVelocity = leftTalon.getSensorCollection().getQuadratureVelocity();
+      
       leftTalon.set(ControlMode.Velocity, (calcFeedForward(targetLeftVelocity) + calcFeedBack(targetLeftVelocity, myLeftVelocity)));
       
       /*Right Wheel*/

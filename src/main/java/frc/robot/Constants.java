@@ -21,4 +21,6 @@ public class Constants {
 
     public static double kV = 1; //needs tuning
     public static int ticksPerRevolution = 4069;
+
+    public static int lookaheadDistance = 3;
 }
