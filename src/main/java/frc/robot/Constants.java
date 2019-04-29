@@ -13,10 +13,10 @@ package frc.robot;
 public class Constants {
 
     //ALL UNITS ARE IN FEET
-    public static double wheelRadius = 3;
+    public static double wheelRadius = 2.5 / 12;
     public static double maxVelocity = 1.7;
     public static double maxAcceleration = 2;
-    public static double wheelBaseWidth = 1.5;
+    public static double wheelBaseWidth = (double)22 / 12;
     public static double kP = 1;
     public static double kI = 0;
     public static double kD = 0;

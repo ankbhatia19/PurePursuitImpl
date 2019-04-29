@@ -25,7 +25,7 @@ public class PurePursuit {
         indexLookaheadPoint = indexCurrentPoint + 1;
     }
 
-    public double[] getNextVelocities(double leftVel, double rightVel, Odometry odo){
+    public double[] getNextVelocities(double leftVel, double rightVel, Odometry odo) {
         /* The algorithm to follow the path is as follows:
             ● Find the closest point
             ● Find the lookahead point
@@ -48,9 +48,9 @@ public class PurePursuit {
 
         double closestDistance = Double.MAX_VALUE;
         int index = -1;
-        for (int i = indexCurrentPoint; i < indexCurrentPoint + 6; i++){
+        for (int i = indexCurrentPoint; i < indexCurrentPoint + 6; i++) {
             double distanceFromPoint = Math.sqrt(Math.pow((path.get(indexCurrentPoint).x - odo.getX()), 2) + Math.pow((path.get(indexCurrentPoint).y - odo.getY()), 2));
-            if (distanceFromPoint < closestDistance){
+            if (distanceFromPoint < closestDistance) {
                 closestDistance = distanceFromPoint;
                 index = i;
             }
@@ -66,11 +66,11 @@ public class PurePursuit {
     public double calculateCurvature(double robotAngle, Segment robot, Segment lookahead) {
         /* curvature = 2x/L^2 */
         /*
-         * a = − tan(robot angle) 
-         * b = 1 
+         * a = − tan(robot angle)
+         * b = 1
          * c = tan(robot angle) * robot x − robot y The
          * point-line distance formula is: d = |ax + by + c| /sqrt(a^2 + b^2) Plugging
-         * in our coefficients and the coordinates of the lookahead point gives: 
+         * in our coefficients and the coordinates of the lookahead point gives:
          * x = |a * lookahead x + b * lookahead y + c| /sqrt(a^2 + b^2)
          */
         /*
@@ -79,24 +79,24 @@ public class PurePursuit {
          */
         double a = -1 * Math.tan(robotAngle);
         double b = 1;
-        double c = Math.tan(robotAngle) *robot.x - robot.y;
+        double c = Math.tan(robotAngle) * robot.x - robot.y;
         double x = Math.abs(a * lookahead.x + b * lookahead.y + c) / Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
-        double curvature = (2 * x) / ((Math.pow(lookahead.x, 2) + Math.pow(lookahead.y, 2)));
+        double curvature = (2 * x) / ((Math.pow(lookahead.x - robot.x, 2) + Math.pow(lookahead.y - robot.y, 2)));
         double side = Math.signum((Math.sin(robotAngle) * (lookahead.x - robot.x)) - (Math.cos(robotAngle) * (lookahead.y - robot.y)));
         return (curvature * side);
     }
 
     public double[] getTargetVelocities(double curvature) {
 
-        double[] velocities = { 0, 0 };
+        double[] velocities = {0, 0};
 
         double velocity = Constants.maxVelocity;
-        velocity = Units.feetToTicks(velocity); // V
-        curvature = Units.feetToTicks(curvature); // C
-        double wheelBaseWidth = Units.feetToTicks(Constants.wheelBaseWidth); // T
-
+        //velocity = Units.feetToTicks(velocity); // V
+        //curvature = Units.feetToTicks(curvature); // C
+        //double wheelBaseWidth = Units.feetToTicks(Constants.wheelBaseWidth); // T
+        double wheelBaseWidth = Constants.wheelBaseWidth;
         /*
-         * Target wheel velocities are given by L = V * (2 + CT)/2 R = V * (2 - CT)/2
+         * Target wheel velocities are given by L = V * (2 + CT)/2; R = V * (2 - CT)/2
          */
 
         /* Left Wheel */
